@@ -1,44 +1,90 @@
-# ADproject
-
 # Active Directory Lab Project Write-Up
 
 ## Project Overview
+This practical lab involved building a production-like Active Directory environment using Windows Server Core 2022, administered exclusively through PowerShell. The implementation covered essential AD components including organizational unit design, user/service account provisioning, security group management, and Group Policy deployment.
 
-The purpose of this lab project was to build a basic Active Directory (AD) environment on Windows Server Core, using PowerShell for management. The goal was to practice creating organizational units (OUs), service accounts, managing group memberships, and exploring AD structure — foundational skills for real-world AD administration.
+## Lab Specifications
+- Domain: xyz.com  
+- Domain Controller: Windows Server 2022 Core  
+- Client Machine: Windows 11 Pro (Domain-joined)  
+- Management Method: 100% PowerShell administration  
 
----
+## Technical Implementation
 
-## What Was Done
+1. Organizational Unit Creation  
+Established the core OU structure with dedicated containers:  
+```powershell
+New-ADOrganizationalUnit -Name "Admins" -Path "DC=xyz,DC=com"
+New-ADOrganizationalUnit -Name "Employees" -Path "DC=xyz,DC=com"
+New-ADOrganizationalUnit -Name "ServiceAccounts" -Path "DC=xyz,DC=com"
+New-ADOrganizationalUnit -Name "Workstations" -Path "DC=xyz,DC=com"
+```
 
-1. **Created Organizational Units (OUs)**  
-   Created multiple OUs to organize users and computers logically within the domain:
-   - Admins  
-   - Employees  
-   - ServiceAccounts  
-   - Workstations  
-   - Domain Controllers  
+2. Account Deployment  
+Created standard users, administrative accounts, and service principals:  
 
-2. **Created a Service Account**  
-   Created a user account named `SQL Service` in the `ServiceAccounts` OU with the following properties:  
-   - SAM Account Name: `sqlservice`  
-   - User Principal Name: `sqlservice@xyz.com`  
-   - Password: `sql@123` (securely converted)  
-   - Enabled account  
-   - Set Service Principal Name (SPN) for SQL Server service  
+| Account Type        | Username   | OU Location     | Purpose                      |
+|---------------------|------------|-----------------|------------------------------|
+| Standard User       | jdoe       | Employees       | General access testing        |
+| Restricted User     | weakuser   | Employees       | GPO restriction testing       |
+| Domain Admin        | admin      | Admins          | Privileged access             |
+| SQL Service Account | sqlservice | ServiceAccounts | Database authentication       |
 
-3. **Group Membership Management**  
-   Added the service account `sqlservice` to the built-in **Server Operators** group, which grants the necessary permissions for server management tasks.
+```powershell
+New-ADUser -Name "SQL Service" -SamAccountName "sqlservice" -UserPrincipalName "sqlservice@xyz.com" -Path "OU=ServiceAccounts,DC=xyz,DC=com" -AccountPassword (ConvertTo-SecureString "sql@123" -AsPlainText -Force) -Enabled $true -ServicePrincipalNames "MSSQLSvc/sql01.xyz.com"
+```
 
-4. **Verification and Idempotency**  
-   Used PowerShell logic to check if OUs and users exist before creating them to prevent duplicates. Also confirmed the group membership was successfully added using error handling.
+3. Security Group Configuration  
+Assigned privileged access to service accounts:  
+```powershell
+Add-ADGroupMember -Identity "Server Operators" -Members "sqlservice"
+```
 
-5. **Explored AD Structure**  
-   Retrieved and reviewed existing OUs, groups containing “operators,” and user accounts with their distinguished names to understand the domain hierarchy and object placement.
+4. Domain Integration Verification  
+Confirmed successful domain join through connectivity tests:  
+```
+whoami          → xyz\jdoe  
+ping xyz.com    → replies from 192.168.111.155  
+ipconfig        → verifies network configuration  
+```
 
----
+5. Group Policy Deployment  
+Implemented desktop restriction policies:  
+```powershell
+New-GPO -Name "Employee Desktop Policy"
+New-GPLink -Name "Employee Desktop Policy" -Target "OU=Employees,DC=xyz,DC=com"
+Set-GPRegistryValue -Name "Employee Desktop Policy" -Key "HKCU\Software\Policies\Microsoft\Windows\System" -ValueName "DisableCMD" -Type DWord -Value 1
+```
 
-## Summary
+6. Policy Enforcement Validation  
+Verified Command Prompt restriction through:  
+- Registry policy application  
+- User access attempt error message: "This operation has been cancelled due to restrictions in effect on this computer..."
 
-This lab provided practical experience in managing AD via PowerShell on a Server Core installation, including creating organizational units, managing users and service accounts, handling group memberships, and querying the AD structure. These are essential skills for Active Directory administration and form a solid foundation for further projects such as Group Policy management, delegated administration, and service account security.
+## Required Documentation  
+Essential screenshots to include:  
+1. GPO restriction error on client  
+2. PowerShell OU creation output  
+3. gpresult policy application proof  
+4. AD organizational unit hierarchy  
+5. User account inventory  
+6. Service account configuration  
+7. Group membership verification  
+8. Domain connectivity tests  
+9. HTML GPO report  
 
----
+## Roadmap for Enhancement  
+1. Security Hardening:  
+   - Password complexity policies  
+   - Account lockout thresholds  
+
+2. Additional GPOs:  
+   - Folder redirection  
+   - Session timeout controls  
+
+3. AD Expansion:  
+   - Computer object organization  
+   - Delegated administration  
+
+## Professional Summary  
+This hands-on exercise delivered comprehensive Active Directory administration experience including infrastructure deployment, account lifecycle management, security group configuration, and Group Policy implementation. The PowerShell-focused approach provided authentic enterprise directory services management practice, directly relevant to system administrator and technical support roles.
