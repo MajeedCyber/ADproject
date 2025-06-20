@@ -32,7 +32,7 @@ User `jdoe` was created under the **Employees** OU and successfully logged into 
 
 ![jdoe login screenshot](./jdoe.png)
 
-![admin login screenshot](./adminlogin.png)
+![admin login screenshot](./Adminlogin.png)
 
 ---
 
